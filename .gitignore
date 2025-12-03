@@ -30,3 +30,4 @@ postgres-data/
 
 # Docker volumes (if mounted locally)
 *.log
+TaxiFlow_Presentation.pptx
