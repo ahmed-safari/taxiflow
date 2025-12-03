@@ -588,6 +588,26 @@ df_clean = df.filter(
 
 **Insight:** VeriFone dominates market share (68.5%) with slightly higher average fares.
 
+### 5.7 Pipeline and Dashboard Screenshots
+
+#### Airflow DAG Execution
+
+The pipeline orchestration in Apache Airflow showing successful execution of both ETL tasks:
+
+![Airflow DAG](screenshots/Airflow.png)
+
+#### Metabase Dashboard - Page 1
+
+Interactive dashboard showing key metrics and visualizations:
+
+![Metabase Dashboard 1](screenshots/Metabase_dashboard_1.png)
+
+#### Metabase Dashboard - Page 2
+
+Additional analytics and detailed breakdowns:
+
+![Metabase Dashboard 2](screenshots/Metabase_dashboard_2.png)
+
 ---
 
 ## 6. Discussion and Conclusion
@@ -676,6 +696,27 @@ docker compose logs -f airflow-scheduler
 # Stop all services
 docker compose down
 ```
+
+---
+
+## Appendix C: AI Tool Usage Disclosure
+
+AI-assisted tools were used during this project for:
+
+- **GitHub Copilot:** Code syntax assistance, debugging, and implementation support
+- **DeepSeek:** Code optimization and troubleshooting
+- **Language Models:** Report writing improvement and documentation clarity
+
+### Important Clarification
+
+All architecture decisions, design choices, methodology, and analysis interpretations were **independently proposed and developed** by the project authors. The AI tools served purely as productivity aids for:
+
+- Implementing the pipeline designed by the authors
+- Improving language clarity and grammar in written reports
+- Debugging and code formatting
+- Generating boilerplate code structures
+
+**No AI tool was used to generate architecture designs, make technology choices, or interpret results.** The intellectual contribution and engineering decisions are entirely the work of the project authors.
 
 ---
 

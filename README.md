@@ -369,21 +369,30 @@ Alternatively, the Spark job will auto-create the `fact_trips` table.
 | **Metabase**        | http://localhost:3000 | (set during setup) | (set during setup) |
 | **PostgreSQL**      | localhost:5432        | demo               | demo               |
 
-## 📈 Dashboard
+## 📈 Dashboard & Pipeline Screenshots
+
+### Airflow DAG Execution
+
+The pipeline is orchestrated by Apache Airflow, running two sequential tasks:
+
+![Airflow DAG](screenshots/Airflow.png)
+
+The DAG `nyc_taxi_etl` shows:
+
+- **extract_to_minio**: Downloads raw data and stores in MinIO data lake
+- **transform_load_postgres**: Transforms data and loads to PostgreSQL warehouse
+
+### Metabase Dashboard
 
 The Metabase dashboard provides visual insights into NYC Green Taxi trip patterns.
 
-### Dashboard Screenshots
+#### Dashboard Overview - Page 1
 
-> 📸 **Add your dashboard screenshots to the `screenshots/` folder**
+![Metabase Dashboard 1](screenshots/Metabase_dashboard_1.png)
 
-After creating your Metabase dashboard, save screenshots with these recommended names:
+#### Dashboard Overview - Page 2
 
-- `dashboard_overview.png` - Full dashboard view
-- `trips_by_time_of_day.png` - Time of day distribution
-- `distance_categories.png` - Distance category breakdown
-- `speed_by_hour.png` - Traffic speed analysis
-- `payment_tips.png` - Tips by payment type
+![Metabase Dashboard 2](screenshots/Metabase_dashboard_2.png)
 
 ### Recommended Dashboard Visualizations
 
@@ -533,5 +542,31 @@ docker logs -f postgres
 
 ---
 
-**Author:** DSAI5102 Data Architecture & Engineering Project  
-**Course:** Fall 2025
+## 🤖 AI Tool Usage Disclosure
+
+AI-assisted tools were used during this project for:
+
+- **GitHub Copilot:** Code syntax assistance, debugging, and implementation support
+- **DeepSeek:** Code optimization and troubleshooting
+- **Language Models:** Report writing improvement and documentation clarity
+
+### Important Clarification
+
+All architecture decisions, design choices, methodology, and analysis interpretations were **independently proposed and developed** by the project authors. The AI tools served purely as productivity aids for:
+
+- Implementing the pipeline designed by the authors
+- Improving language clarity and grammar in written reports
+- Debugging and code formatting
+- Generating boilerplate code structures
+
+> ⚠️ **No AI tool was used to generate architecture designs, make technology choices, or interpret results.** The intellectual contribution and engineering decisions are entirely the work of the project authors.
+
+---
+
+**Authors:**
+
+- Ahmed Safari – 60101938
+- Jassim Moinuddin – 60103272
+
+**Course:** DSAI5102 Data Architecture & Engineering  
+**Semester:** Fall 2025
