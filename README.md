@@ -200,18 +200,18 @@ POSTGRES_USER=demo
 POSTGRES_PASSWORD=demo
 ```
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `AIRFLOW_UID` | User ID for Airflow containers | `50000` |
-| `AIRFLOW_PROJ_DIR` | Airflow project directory | `.` |
-| `MINIO_ENDPOINT` | MinIO S3-compatible API endpoint | `http://minio:9000` |
-| `MINIO_ACCESS_KEY` | MinIO access key (username) | `minioadmin` |
-| `MINIO_SECRET_KEY` | MinIO secret key (password) | `minioadmin` |
-| `POSTGRES_HOST` | PostgreSQL hostname | `postgres` |
-| `POSTGRES_PORT` | PostgreSQL port | `5432` |
-| `POSTGRES_DB` | PostgreSQL database name | `sampledb` |
-| `POSTGRES_USER` | PostgreSQL username | `demo` |
-| `POSTGRES_PASSWORD` | PostgreSQL password | `demo` |
+| Variable            | Description                      | Default             |
+| ------------------- | -------------------------------- | ------------------- |
+| `AIRFLOW_UID`       | User ID for Airflow containers   | `50000`             |
+| `AIRFLOW_PROJ_DIR`  | Airflow project directory        | `.`                 |
+| `MINIO_ENDPOINT`    | MinIO S3-compatible API endpoint | `http://minio:9000` |
+| `MINIO_ACCESS_KEY`  | MinIO access key (username)      | `minioadmin`        |
+| `MINIO_SECRET_KEY`  | MinIO secret key (password)      | `minioadmin`        |
+| `POSTGRES_HOST`     | PostgreSQL hostname              | `postgres`          |
+| `POSTGRES_PORT`     | PostgreSQL port                  | `5432`              |
+| `POSTGRES_DB`       | PostgreSQL database name         | `sampledb`          |
+| `POSTGRES_USER`     | PostgreSQL username              | `demo`              |
+| `POSTGRES_PASSWORD` | PostgreSQL password              | `demo`              |
 
 > ⚠️ **Security Note:** For production deployments, change all default passwords and never commit the `.env` file to version control.
 
