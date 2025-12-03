@@ -79,14 +79,17 @@ This project builds a scalable data pipeline to transform raw NYC Green Taxi tri
 .
 ├── docker-compose.yaml          # Docker services configuration
 ├── Dockerfile.spark             # Custom Spark image with required JARs
+├── Dockerfile.airflow           # Custom Airflow image with Docker CLI
 ├── Makefile                     # Quick commands for pipeline management
 ├── .env                         # Environment variables (create from .env.example)
 ├── .env.example                 # Environment variables template
 ├── README.md                    # This file
 │
+├── dags/
+│   └── nyc_taxi_etl_dag.py     # Airflow DAG definition
+│
 ├── airflow/
-│   ├── dags/
-│   │   └── nyc_taxi_etl_dag.py # Airflow DAG definition
+│   ├── dags/                    # Synced DAG files
 │   ├── logs/                    # Airflow logs
 │   ├── config/                  # Airflow configuration
 │   └── plugins/                 # Airflow plugins
@@ -97,6 +100,7 @@ This project builds a scalable data pipeline to transform raw NYC Green Taxi tri
 │
 ├── sql/
 │   ├── init.sql                # Auto-initialization script (runs on startup)
+│   ├── init-airflow.sql        # Airflow database initialization
 │   ├── create_tables.sql       # Schema and table definitions
 │   └── analytical_views.sql    # Pre-built analytical views
 │
