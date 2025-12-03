@@ -56,6 +56,10 @@ This project builds a scalable data pipeline to transform raw NYC Green Taxi tri
 - _What payment methods do riders prefer?_ → Inform payment system investments
 - _How does trip volume vary by day of week?_ → Plan weekend vs. weekday operations
 - _What is the average trip duration by time of day?_ → Set realistic ETAs for passengers
+- _What are the traffic patterns throughout the day?_ → Speed analysis by hour reveals congestion
+- _How do tip percentages vary by payment type?_ → Credit card users tip 17.57% vs 0% for cash
+- _What are the most profitable trip segments?_ → Fare per mile/minute analysis
+- _How do the taxi vendors compare?_ → Vendor performance metrics
 
 ## 🛠️ Technologies Used
 
@@ -75,7 +79,9 @@ This project builds a scalable data pipeline to transform raw NYC Green Taxi tri
 .
 ├── docker-compose.yaml          # Docker services configuration
 ├── Dockerfile.spark             # Custom Spark image with required JARs
-├── .env                         # Environment variables for Airflow
+├── Makefile                     # Quick commands for pipeline management
+├── .env                         # Environment variables (create from .env.example)
+├── .env.example                 # Environment variables template
 ├── README.md                    # This file
 │
 ├── airflow/
@@ -90,8 +96,12 @@ This project builds a scalable data pipeline to transform raw NYC Green Taxi tri
 │   └── transform_load_postgres.py # Transform and load to PostgreSQL
 │
 ├── sql/
+│   ├── init.sql                # Auto-initialization script (runs on startup)
 │   ├── create_tables.sql       # Schema and table definitions
 │   └── analytical_views.sql    # Pre-built analytical views
+│
+├── screenshots/                 # Dashboard and UI screenshots
+│   └── (add your screenshots here)
 │
 ├── minio-data/                  # MinIO data persistence
 ├── metabase-data/               # Metabase configuration persistence
@@ -113,12 +123,19 @@ The pipeline runs on a daily schedule (configurable) and consists of two main st
 ### Stage 2: Transform and Load (`transform_load_postgres.py`)
 
 1. Reads raw parquet data from MinIO
-2. Performs transformations:
-   - Converts timestamps to proper datetime format
-   - Extracts `trip_hour` from pickup time
-   - Extracts `trip_weekday` from pickup time
-   - Calculates `trip_duration_min` (dropoff - pickup time)
-3. Selects relevant columns for analytics
+2. Performs **12 advanced transformations**:
+   - **Time Features:** Extracts `trip_hour`, `trip_weekday`, `trip_month`, `trip_day`
+   - **Time of Day:** Categorizes trips into Morning/Afternoon/Evening/Night
+   - **Day Type:** Classifies as Weekend or Weekday
+   - **Trip Duration:** Calculates duration in minutes from timestamps
+   - **Speed Analysis:** Computes `avg_speed_mph` (distance ÷ time)
+   - **Fare Efficiency:** Calculates `fare_per_mile` and `fare_per_minute`
+   - **Distance Categories:** Short (<1mi) / Medium (1-5mi) / Long (5-10mi) / Very Long (>10mi)
+   - **Fare Categories:** Budget (<$10) / Standard ($10-25) / Premium ($25-50) / Luxury (>$50)
+   - **Tip Analysis:** Calculates `tip_percentage` from fare and tip amounts
+   - **Payment Mapping:** Converts payment codes to names (Credit Card, Cash, etc.)
+   - **Vendor Mapping:** Maps vendor IDs to company names
+3. Applies **data quality filters** (removes invalid fares, distances, durations, speeds)
 4. Loads the transformed data into PostgreSQL `fact_trips` table
 
 ### Airflow DAG
@@ -133,38 +150,89 @@ The DAG runs daily and orchestrates both Spark jobs in sequence.
 
 ### Fact Table: `fact_trips`
 
-| Column            | Type      | Description                             |
-| ----------------- | --------- | --------------------------------------- |
-| trip_id           | SERIAL    | Primary key                             |
-| vendor_id         | INT       | Taxi vendor identifier                  |
-| pickup_datetime   | TIMESTAMP | Trip start time                         |
-| dropoff_datetime  | TIMESTAMP | Trip end time                           |
-| trip_distance     | FLOAT     | Distance traveled in miles              |
-| total_amount      | FLOAT     | Total fare amount                       |
-| payment_type      | INT       | Payment method (FK to dim_payment_type) |
-| trip_hour         | INT       | Hour of pickup (0-23)                   |
-| trip_weekday      | INT       | Day of week (1=Sunday, 7=Saturday)      |
-| trip_duration_min | FLOAT     | Trip duration in minutes                |
+The fact table contains **23 columns** with both raw and derived analytics features:
 
-### Dimension Table: `dim_payment_type`
-
-| payment_type | payment_desc |
-| ------------ | ------------ |
-| 1            | Credit card  |
-| 2            | Cash         |
-| 3            | No charge    |
-| 4            | Dispute      |
-| 5            | Unknown      |
-| 6            | Voided trip  |
+| Column            | Type      | Description                                   |
+| ----------------- | --------- | --------------------------------------------- |
+| VendorID          | INT       | Taxi vendor identifier                        |
+| vendor_name       | TEXT      | Vendor company name (derived)                 |
+| pickup_datetime   | TIMESTAMP | Trip start time                               |
+| dropoff_datetime  | TIMESTAMP | Trip end time                                 |
+| trip_distance     | FLOAT     | Distance traveled in miles                    |
+| total_amount      | FLOAT     | Total fare amount                             |
+| tip_amount        | FLOAT     | Tip amount                                    |
+| payment_type      | INT       | Payment method code                           |
+| payment_type_name | TEXT      | Payment method name (Credit Card, Cash, etc.) |
+| trip_hour         | INT       | Hour of pickup (0-23)                         |
+| trip_weekday      | INT       | Day of week (1=Sunday, 7=Saturday)            |
+| trip_month        | INT       | Month of pickup                               |
+| trip_day          | INT       | Day of month                                  |
+| trip_duration_min | FLOAT     | Trip duration in minutes                      |
+| time_of_day       | TEXT      | Morning / Afternoon / Evening / Night         |
+| is_weekend        | BOOLEAN   | True if Saturday or Sunday                    |
+| day_type          | TEXT      | "Weekend" or "Weekday"                        |
+| avg_speed_mph     | FLOAT     | Average speed in miles per hour               |
+| fare_per_mile     | FLOAT     | Fare efficiency ($/mile)                      |
+| fare_per_minute   | FLOAT     | Fare efficiency ($/minute)                    |
+| distance_category | TEXT      | Short/Medium/Long/Very Long                   |
+| fare_category     | TEXT      | Budget/Standard/Premium/Luxury                |
+| tip_percentage    | FLOAT     | Tip as percentage of fare                     |
 
 ### Pre-built Analytical Views
 
-- `trips_by_hour` - Trip count distribution by hour of day
-- `trips_by_weekday` - Trip count distribution by day of week
-- `payment_type_distribution` - Trip count by payment method
-- `avg_trip_duration_hour` - Average trip duration by hour
+The `nyc_taxi` schema contains **11 pre-aggregated views** for dashboard creation:
+
+| View Name                      | Description                              | Use Case                       |
+| ------------------------------ | ---------------------------------------- | ------------------------------ |
+| `v_trips_by_time_of_day`       | Trips by Morning/Afternoon/Evening/Night | Pie chart of demand patterns   |
+| `v_weekend_weekday_comparison` | Weekend vs Weekday metrics               | Comparison bar chart           |
+| `v_distance_category_dist`     | Trip distance distribution               | Pie chart of trip lengths      |
+| `v_fare_category_breakdown`    | Fare tier analysis                       | Revenue segmentation           |
+| `v_avg_speed_by_hour`          | Traffic speed patterns                   | Line chart of congestion       |
+| `v_tip_by_payment`             | Tips by payment method                   | Bar chart of tipping behavior  |
+| `v_vendor_performance`         | Vendor comparison metrics                | Vendor analysis table          |
+| `v_fare_efficiency`            | Fare per mile/minute by time             | Efficiency analysis            |
+| `v_hourly_revenue`             | Revenue by hour                          | Area chart of revenue patterns |
+| `v_daily_summary`              | Daily operational metrics                | Time-series dashboard          |
+| `v_kpi_summary`                | Executive KPIs                           | Summary number cards           |
 
 ## 🚀 Setup & Installation
+
+### Quick Start (TL;DR)
+
+```bash
+# 1. Setup environment
+cp .env.example .env
+
+# 2. Build and start all services
+make build
+make up
+
+# 3. Create MinIO bucket (wait ~30 seconds for services to start)
+make init-minio
+
+# 4. Run the ETL pipeline
+make run-pipeline
+
+# 5. Open Metabase and create dashboards
+open http://localhost:3000
+```
+
+### Available Make Commands
+
+| Command             | Description                 |
+| ------------------- | --------------------------- |
+| `make help`         | Show all available commands |
+| `make build`        | Build Docker images         |
+| `make up`           | Start all services          |
+| `make down`         | Stop all services           |
+| `make restart`      | Restart all services        |
+| `make clean`        | Stop and remove all data    |
+| `make init-minio`   | Create the datalake bucket  |
+| `make run-pipeline` | Run the full ETL pipeline   |
+| `make status`       | Show service health status  |
+| `make logs`         | Tail logs from all services |
+| `make db-shell`     | Connect to PostgreSQL CLI   |
 
 ### Prerequisites
 
@@ -267,7 +335,7 @@ Alternatively, the Spark job will auto-create the `fact_trips` table.
 
 ### Step 8: Configure & Run Airflow DAG
 
-1. Open Airflow UI: http://localhost:8080
+1. Open Airflow UI: http://localhost:8081
 2. Login with:
    - **Username:** `airflow`
    - **Password:** `airflow`
@@ -291,67 +359,104 @@ Alternatively, the Spark job will auto-create the `fact_trips` table.
 
 | Service             | URL                   | Username           | Password           |
 | ------------------- | --------------------- | ------------------ | ------------------ |
-| **Airflow**         | http://localhost:8080 | airflow            | airflow            |
+| **Airflow**         | http://localhost:8081 | airflow            | airflow            |
 | **MinIO Console**   | http://localhost:9001 | minioadmin         | minioadmin         |
 | **Spark Master UI** | http://localhost:8080 | -                  | -                  |
 | **Metabase**        | http://localhost:3000 | (set during setup) | (set during setup) |
 | **PostgreSQL**      | localhost:5432        | demo               | demo               |
 
-> **Note:** Airflow and Spark Master both use port 8080. Access Spark UI at http://localhost:8080 when Airflow is stopped, or modify ports in docker-compose.yaml.
-
 ## 📈 Dashboard
 
-The Metabase dashboard includes at least two visualization tiles:
+The Metabase dashboard provides visual insights into NYC Green Taxi trip patterns.
 
-### 1. Trips by Hour of Day (Temporal Distribution)
+### Dashboard Screenshots
 
-A bar chart showing the number of trips per hour, revealing peak taxi usage times.
+> 📸 **Add your dashboard screenshots to the `screenshots/` folder**
 
-**SQL Query:**
+After creating your Metabase dashboard, save screenshots with these recommended names:
+
+- `dashboard_overview.png` - Full dashboard view
+- `trips_by_time_of_day.png` - Time of day distribution
+- `distance_categories.png` - Distance category breakdown
+- `speed_by_hour.png` - Traffic speed analysis
+- `payment_tips.png` - Tips by payment type
+
+### Recommended Dashboard Visualizations
+
+Create these charts in Metabase using **+ New → Question → Native Query**:
+
+#### Tile 1: Trips by Time of Day (Pie Chart)
 
 ```sql
-SELECT trip_hour, COUNT(*) as total_trips
-FROM fact_trips
-GROUP BY trip_hour
-ORDER BY trip_hour;
+SELECT time_of_day, trip_count
+FROM nyc_taxi.v_trips_by_time_of_day;
 ```
 
-### 2. Payment Type Distribution (Categorical Distribution)
-
-A pie chart showing the breakdown of trips by payment method.
-
-**SQL Query:**
+#### Tile 2: Weekend vs Weekday Revenue (Bar Chart)
 
 ```sql
-SELECT
-    CASE payment_type
-        WHEN 1 THEN 'Credit Card'
-        WHEN 2 THEN 'Cash'
-        WHEN 3 THEN 'No Charge'
-        WHEN 4 THEN 'Dispute'
-        WHEN 5 THEN 'Unknown'
-        ELSE 'Other'
-    END as payment_method,
-    COUNT(*) as total_trips
-FROM fact_trips
-GROUP BY payment_type;
+SELECT day_type, total_revenue, trip_count
+FROM nyc_taxi.v_weekend_weekday_comparison;
 ```
 
-### Additional Dashboard Ideas
+#### Tile 3: Distance Category Distribution (Pie Chart)
 
-- **Trips by Day of Week** - Bar chart showing weekday vs weekend patterns
-- **Average Trip Duration by Hour** - Line chart for operational insights
-- **Trip Distance Distribution** - Histogram of trip lengths
-- **Revenue by Payment Type** - Stacked bar chart
+```sql
+SELECT distance_category, percentage
+FROM nyc_taxi.v_distance_category_dist;
+```
+
+#### Tile 4: Fare Category Breakdown (Pie Chart)
+
+```sql
+SELECT fare_category, percentage
+FROM nyc_taxi.v_fare_category_breakdown;
+```
+
+#### Tile 5: Traffic Speed by Hour (Line Chart)
+
+```sql
+SELECT trip_hour, avg_speed_mph
+FROM nyc_taxi.v_avg_speed_by_hour;
+```
+
+#### Tile 6: Tips by Payment Type (Bar Chart)
+
+```sql
+SELECT payment_type_name, avg_tip_pct, total_tips
+FROM nyc_taxi.v_tip_by_payment
+WHERE payment_type_name != 'Unknown';
+```
+
+#### Tile 7: Hourly Revenue Pattern (Area Chart)
+
+```sql
+SELECT trip_hour, total_revenue, trip_count
+FROM nyc_taxi.v_hourly_revenue;
+```
+
+#### Tile 8: Vendor Performance (Table)
+
+```sql
+SELECT * FROM nyc_taxi.v_vendor_performance;
+```
+
+#### Tile 9: KPI Summary Cards
+
+```sql
+SELECT * FROM nyc_taxi.v_kpi_summary;
+```
 
 ## 🛑 Stopping the Services
 
 ```bash
-# Stop all services (preserves data)
-docker compose down
+# Using Makefile (recommended)
+make down          # Stop all services (preserves data)
+make clean         # Stop and remove all data (with confirmation)
 
-# Stop and remove all data volumes
-docker compose down -v
+# Or using docker compose directly
+docker compose down        # Stop all services (preserves data)
+docker compose down -v     # Stop and remove all data volumes
 ```
 
 ## 🔧 Troubleshooting
@@ -397,15 +502,22 @@ docker logs -f postgres
 - **Dataset:** Green Taxi Trip Records (January 2024)
 - **Format:** Parquet
 - **Size:** ~50MB compressed
+- **Records:** 56,551 raw → 55,852 after quality filtering
+- **Revenue:** $1,252,467.49 total
+- **Tips:** $126,820.52 total
 
 ## 🔮 Future Improvements
 
 - [ ] Add data quality checks with Great Expectations
 - [ ] Implement incremental data loading
-- [ ] Add more dimension tables (locations, vendors)
+- [x] ~~Add more dimension tables (locations, vendors)~~ Added vendor and payment type names
+- [x] ~~Add derived analytics features~~ Added 12 advanced transformations
+- [x] ~~Create pre-built analytical views~~ Added 11 views in nyc_taxi schema
 - [ ] Set up alerts for pipeline failures
 - [ ] Add data lineage tracking
 - [ ] Implement CI/CD for DAG deployments
+- [ ] Add unit tests for Spark transformations
+- [ ] Implement partitioning for large datasets
 
 ## 📚 References
 
