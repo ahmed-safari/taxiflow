@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.ipynb_checkpoints/
+*.ipynb
+
+# Airflow logs
+logs/
+airflow/logs/
+
+# Data directories (large files, auto-generated)
+minio-data/
+metabase-data/
+postgres-data/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker volumes (if mounted locally)
+*.log
